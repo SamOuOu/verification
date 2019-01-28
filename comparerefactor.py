@@ -6,6 +6,10 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 import sys
+from openpyxl.chart import (
+    LineChart,
+    Reference,
+)
 def check():
     excel_filename = input('請輸入要校驗之excel檔名(含副檔名)：\n')
     wb = load_workbook(filename = excel_filename, keep_vba=True)
@@ -28,7 +32,7 @@ def check():
     client = MongoClient(uri)
     #上面連線
     db = client["weather"]# 資料庫名
-    return (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db)
+    return (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db,wb)
 def get_rain(time_after,time_before,station_code,rainfolder_name,db):
     rain_collection = db[rainfolder_name]#資料夾名
     #上面找資料庫的資料夾
@@ -116,8 +120,7 @@ def get_other(time_after,time_before,station_code,otherfolder_name,db):
     # 以observaton_time檢視及篩選資料並將其wind_speed底下value的值裝入wind_use清單
     # #######################上面處理風力資料#######################
 #########################全部資料##############################
-def get_forecast(excel_filename):
-    wb = load_workbook(filename = excel_filename, keep_vba=True)
+def get_forecast(wb,excel_filename):
     sheet = wb.get_sheet_by_name('IBL表格放置區')
     #上面找檔案跟資料頁
     time_range = []
@@ -138,7 +141,6 @@ def get_forecast(excel_filename):
     for row_cell in sheet['G3':'G26']:
         for cell in row_cell:
             wind.append(cell.value)
-    wb = load_workbook(filename = excel_filename, keep_vba=True)
     sheet = wb.get_sheet_by_name('表單輸入區')
     for row_cell in sheet['F6':'AC6']:
         for cell in row_cell:
@@ -146,7 +148,7 @@ def get_forecast(excel_filename):
     for row_cell in sheet['F12':'AC12']:
         for cell in row_cell:
             rain_per.append(cell.value)
-    return(time_range,rain,temp,humi,wind,wb)
+    return(time_range,rain,temp,humi,wind)
     #上面一大段從[指定範圍位置]取得各單項資料
 #########################################################
 def campare(rain_use,temp_use,humi_use,wind_use,rain,temp,humi,wind):
@@ -184,10 +186,9 @@ def campare(rain_use,temp_use,humi_use,wind_use,rain,temp,humi,wind):
         a += 1
     return(rain_abs,temp_abs,humi_abs,wind_abs)
 ################################
-def put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,rain_abs,temp_abs,humi_abs,wind_abs,wb,excel_filename):
+def put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,rain_abs,temp_abs,humi_abs,wind_abs,wb):
     ws2 = wb.create_sheet("校驗結果")
     ali = Alignment(horizontal='center', vertical='center')
-    tiktok = range(25)
 
     ws2['A1'] = '時間'
     ws2['A2'] = '觀測降雨'
@@ -266,16 +267,95 @@ def put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,ra
     for row in ws2.iter_rows():
         for cell in row:
             cell.alignment = ali
+    return(ws2)
+def draw_pic(wb,excel_filename,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,time_range):
+    ws3 = wb.create_sheet("製圖")
+    rows = [time_range]
+    for row in list(zip(*rows)):
+        ws3.append(row)
+    dates = Reference(ws3, min_col=1, min_row=1, max_row=24)
+##############################################
+    rain.insert(0, '預報降雨')
+    rain_use.insert(0, '觀測降雨')
+    rows = [rain, rain_use]
 
+    for row in list(zip(*rows)):
+        ws3.append(row)
+
+    chart_rain = LineChart()
+    chart_rain.title = "降雨"
+    chart_rain.style = 2
+    chart_rain.y_axis.title = 'mm'
+    chart_rain.x_axis.title = '預報時間'
+
+    data = Reference(ws3, min_col=1, min_row=25, max_row=49, max_col=2)
+    chart_rain.add_data(data, titles_from_data=True)
+    chart_rain.set_categories(dates)
+##############################################
+    temp.insert(0, '預報溫度')
+    temp_use.insert(0, '觀測溫度')
+    rows = [temp, temp_use]
+
+    for row in list(zip(*rows)):
+        ws3.append(row)
+
+    chart_temp = LineChart()
+    chart_temp.title = "氣溫"
+    chart_temp.style = 2
+    chart_temp.y_axis.title = '℃'
+    chart_temp.x_axis.title = '預報時間'
+
+    data = Reference(ws3, min_col=1, min_row=50, max_row=74, max_col=2)
+    chart_temp.add_data(data, titles_from_data=True)
+    chart_temp.set_categories(dates)
+##############################################
+    humi.insert(0, '預報濕度')
+    humi_use.insert(0, '觀測濕度')
+    rows = [humi, humi_use]
+
+    for row in list(zip(*rows)):
+        ws3.append(row)
+
+    chart_humi = LineChart()
+    chart_humi.title = "濕度"
+    chart_humi.style = 2
+    chart_humi.y_axis.title = '%'
+    chart_humi.x_axis.title = '預報時間'
+
+    data = Reference(ws3, min_col=1, min_row=75, max_row=99, max_col=2)
+    chart_humi.add_data(data, titles_from_data=True)
+    chart_humi.set_categories(dates)
+##############################################
+    wind.insert(0, '預報風速')
+    wind_use.insert(0, '觀測風速')
+    rows = [wind, wind_use]
+
+    for row in list(zip(*rows)):
+        ws3.append(row)
+
+    chart_wind = LineChart()
+    chart_wind.title = "風速"
+    chart_wind.style = 2
+    chart_wind.y_axis.title = 'm/s'
+    chart_wind.x_axis.title = '預報時間'
+
+    data = Reference(ws3, min_col=1, min_row=100, max_row=124, max_col=2)
+    chart_wind.add_data(data, titles_from_data=True)
+    chart_wind.set_categories(dates)
+##############################################
+    ws3.add_chart(chart_rain, "C1")
+    ws3.add_chart(chart_temp, "C14")
+    ws3.add_chart(chart_humi, "C27")
+    ws3.add_chart(chart_wind, "C40")
     wb.save(excel_filename)
-
 def main():
-    (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db) = check()
+    (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db,wb) = check()
     rain_use = get_rain(time_after,time_before,station_code,rainfolder_name,db)
     (temp_use,humi_use,wind_use) = get_other(time_after,time_before,station_code,otherfolder_name,db)
-    (time_range,rain,temp,humi,wind,wb) = get_forecast(excel_filename)
+    (time_range,rain,temp,humi,wind) = get_forecast(wb,excel_filename)
     (rain_abs,temp_abs,humi_abs,wind_abs) = campare(rain_use,temp_use,humi_use,wind_use,rain,temp,humi,wind)
-    put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,rain_abs,temp_abs,humi_abs,wind_abs,wb,excel_filename)
+    put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,rain_abs,temp_abs,humi_abs,wind_abs,wb)
+    draw_pic(wb,excel_filename,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,time_range)
 
 if __name__ == "__main__":
     main()
