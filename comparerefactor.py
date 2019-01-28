@@ -29,7 +29,7 @@ def check():
     #上面連線
     db = client["weather"]# 資料庫名
     return (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db)
-def get_rain(time_after,,time_before,station_code,rainfolder_name,db):
+def get_rain(time_after,time_before,station_code,rainfolder_name,db):
     rain_collection = db[rainfolder_name]#資料夾名
     #上面找資料庫的資料夾
     timecheck = []
@@ -53,7 +53,7 @@ def get_rain(time_after,,time_before,station_code,rainfolder_name,db):
     return(rain_use)
     #以observaton_time檢視並透過分鐘值=0篩選資料，後將其pcpn底下value的值裝入rain_use清單
 ######################上面處理雨量資料###########################
-def get_other(time_before,time_after,station_code,otherfolder_name,db):
+def get_other(time_after,time_before,station_code,otherfolder_name,db):
     temp_collection = db[otherfolder_name]#資料夾名
     #上面設定抓取資料夾
     timecheck = []
@@ -270,9 +270,9 @@ def put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,ra
     wb.save(excel_filename)
 
 def main():
-    (time_before,time_after,station_code,rainfolder_name,otherfolder_name,excel_filename,db) = check()
-    rain_use = get_rain(time_before,time_after,station_code,rainfolder_name,db)
-    (temp_use,humi_use,wind_use) = get_other(time_before,time_after,station_code,otherfolder_name,db)
+    (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db) = check()
+    rain_use = get_rain(time_after,time_before,station_code,rainfolder_name,db)
+    (temp_use,humi_use,wind_use) = get_other(time_after,time_before,station_code,otherfolder_name,db)
     (time_range,rain,temp,humi,wind,wb) = get_forecast(excel_filename)
     (rain_abs,temp_abs,humi_abs,wind_abs) = campare(rain_use,temp_use,humi_use,wind_use,rain,temp,humi,wind)
     put_in(time_range,rain,temp,humi,wind,rain_use,temp_use,humi_use,wind_use,rain_abs,temp_abs,humi_abs,wind_abs,wb,excel_filename)
