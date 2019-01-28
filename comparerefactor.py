@@ -7,16 +7,11 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 import sys
 def check():
-    t_after_y = int(input('請輸入預報開始UTC時間,例如台灣時間2018年12月25日1時開始則輸入2018：\n'))
-    t_after_m = int(input('請輸入預報開始UTC時間,例如台灣時間2018年12月25日1時開始則輸入12：\n'))
-    t_after_d = int(input('請輸入預報開始UTC時間,例如台灣時間2018年12月25日1時開始則輸入24：\n'))
-    t_after_h = int(input('請輸入預報開始UTC時間,例如台灣時間2018年12月25日1時開始則輸入17：\n'))
-    t_before_y = int(input('請輸入預報結束UTC時間,例如台灣時間2018年12月25日24時結束則輸入2018：\n'))
-    t_before_m = int(input('請輸入預報結束UTC時間,例如台灣時間2018年12月25日24時結束則輸入12：\n'))
-    t_before_d = int(input('請輸入預報結束UTC時間,例如台灣時間2018年12月25日24時結束則輸入25：\n'))
-    t_before_h = int(input('請輸入預報結束UTC時間,例如台灣時間2018年12月25日24時結束則輸入16：\n'))
-    time_before = datetime.datetime(t_before_y,t_before_m,t_before_d,t_before_h)#設定結束時間
-    time_after = datetime.datetime(t_after_y,t_after_m,t_after_d,t_after_h)#設定起始時間
+    excel_filename = input('請輸入要校驗之excel檔名(含副檔名)：\n')
+    wb = load_workbook(filename = excel_filename, keep_vba=True)
+    sheet = wb.get_sheet_by_name('IBL表格放置區')
+    time_after = sheet['B1'].value
+    time_before = time_after + datetime.timedelta(days=1)
     station_code = input('請輸入校驗之觀測測站代碼，例如板橋站則輸入466880：\n')
     while True:
         ask = input('是否需要修改雨量及觀測資料來源資料庫夾?(y/n)：\n')
@@ -28,15 +23,13 @@ def check():
             rainfolder_name = 'observation_new'
             otherfolder_name = 'observation'
             break
-
-    excel_filename = input('請輸入要校驗之excel檔名(含副檔名)：\n')
     #上面設定時間範圍
     uri = "mongodb://heimdall:data3.14info@35.163.6.173" 
     client = MongoClient(uri)
     #上面連線
     db = client["weather"]# 資料庫名
-    return (time_before,time_after,station_code,rainfolder_name,otherfolder_name,excel_filename,db)
-def get_rain(time_before,time_after,station_code,rainfolder_name,db):
+    return (time_after,time_before,station_code,rainfolder_name,otherfolder_name,excel_filename,db)
+def get_rain(time_after,,time_before,station_code,rainfolder_name,db):
     rain_collection = db[rainfolder_name]#資料夾名
     #上面找資料庫的資料夾
     timecheck = []
@@ -53,6 +46,7 @@ def get_rain(time_before,time_after,station_code,rainfolder_name,db):
             if post['observation_time'] not in timecheck and post['observation_time'].minute == 0:
                 timecheck.append(post['observation_time'])
                 rain_use.append(post['pcpn']['value'])
+                print(post['observation_time'])
             else:
                 pass
     rain_use.reverse()
